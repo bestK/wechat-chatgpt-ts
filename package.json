@@ -15,11 +15,12 @@
     "dotenv": "^16.0.3",
     "execa": "^6.1.0",
     "gpt3-tokenizer": "^1.1.5",
-    "openai": "^3.2.1",
+    "openai": "^3.3.0",
+    "openai-function-calling-tools": "^6.1.2",
     "qrcode": "^1.5.1",
     "uuid": "^9.0.0",
     "wechaty": "^1.20.2",
-    "wechaty-puppet-wechat": "^1.18.4"
+    "wechaty-puppet-padlocal": "^1.20.1"
   },
   "devDependencies": {
     "@types/async-retry": "^1.4.5",

@@ -1,4 +1,6 @@
-import {ChatCompletionRequestMessage} from "openai";
+import { FileBox } from "file-box";
+import { ChatCompletionRequestMessage } from "openai";
+
 
 export interface IConfig {
   api?: string;
@@ -10,8 +12,51 @@ export interface IConfig {
   blockWords: string[];
   chatgptBlockWords: string[];
   chatPrivateTriggerKeyword: string;
+  padlocalToken: string;
+  openaiKeyUrl: string;
+  amapApiKey: string;
+  mjApiHost: string;
+  mjApiKey: string;
 }
+
 export interface User {
   username: string,
   chatMessage: Array<ChatCompletionRequestMessage>,
+}
+
+export enum MessageType {
+  Unknown = 0,
+  Attachment = 1, // Attach(6),
+  Audio = 2, // Audio(1), Voice(34)
+  Contact = 3, // ShareCard(42)
+  ChatHistory = 4, // ChatHistory(19)
+  Emoticon = 5, // Sticker: Emoticon(15), Emoticon(47)
+  Image = 6, // Img(2), Image(3)
+  Text = 7, // Text(1)
+  Location = 8, // Location(48)
+  MiniProgram = 9, // MiniProgram(33)
+  GroupNote = 10, // GroupNote(53)
+  Transfer = 11, // Transfers(2000)
+  RedEnvelope = 12, // RedEnvelopes(2001)
+  Recalled = 13, // Recalled(10002)
+  Url = 14, // Url(5)
+  Video = 15, // Video(4), Video(43)
+  Post = 16, // Moment, Channel, Tweet, etc
+}
+
+export interface FunctionResponse {
+  msgType: MessageType,
+  data?: any,
+  msg?: string
+}
+
+
+export class MessageBuilder {
+  static build(message: FunctionResponse) {
+    if (message?.msgType == MessageType.Image) {
+      return FileBox.fromUrl(message.data, { name: `${new Date().getTime()}.png` })
+    } else {
+      return message?.data
+    }
+  }
 }

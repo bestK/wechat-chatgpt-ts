@@ -1,15 +1,15 @@
-import { WechatyBuilder } from "wechaty";
 import QRCode from "qrcode";
+import { WechatyBuilder } from "wechaty";
+import PuppetPadlocal from "wechaty-puppet-padlocal";
 import { ChatGPTBot } from "./bot.js";
-import {config} from "./config.js";
+import { config } from "./config.js";
 const chatGPTBot = new ChatGPTBot();
 
-const bot =  WechatyBuilder.build({
+const bot = WechatyBuilder.build({
   name: "wechat-assistant", // generate xxxx.memory-card.json and save login data for the next login
-  puppet: "wechaty-puppet-wechat",
-  puppetOptions: {
-    uos: true
-  }
+  puppet: new PuppetPadlocal({
+    token: chatGPTBot.padlocalToken,
+  }),
 });
 async function main() {
   const initializedAt = Date.now()

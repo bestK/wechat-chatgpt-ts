@@ -1,6 +1,6 @@
 import * as dotenv from "dotenv";
-dotenv.config();
 import { IConfig } from "./interface";
+dotenv.config();
 
 export const config: IConfig = {
   api: process.env.API,
@@ -12,4 +12,9 @@ export const config: IConfig = {
   temperature: process.env.TEMPERATURE ? parseFloat(process.env.TEMPERATURE) : 0.6,
   blockWords: process.env.BLOCK_WORDS?.split(",") || [],
   chatgptBlockWords: process.env.CHATGPT_BLOCK_WORDS?.split(",") || [],
+  padlocalToken: process.env.PADLOCAL_TOKEN || "",
+  openaiKeyUrl: process.env.OPENAI_KEY_URL || "",
+  amapApiKey: process.env.AMAP_API_KEY || "",
+  mjApiHost: process.env.MJ_API_HOST || "",
+  mjApiKey: process.env.MJ_API_KEY || "",
 };
