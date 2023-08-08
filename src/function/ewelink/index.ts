@@ -7,7 +7,7 @@ import { EwelinkStateMgr } from "./state.js";
 let ewelinkMgr: EwelinkStateMgr
 
 export function getMgr() {
-    if (ewelinkMgr) return ewelinkMgr
+    if (ewelinkMgr?.connection) return ewelinkMgr
 
     const connection = new ewelink({
         // @ts-ignore
@@ -24,13 +24,13 @@ export function getMgr() {
 
 
 export async function getLoginInfo() {
-    const loginInfo = await getMgr().connection?.login()
+    const loginInfo = ewelinkMgr?.loginInfo || await getMgr().connection?.login()
     ewelinkMgr.loginInfo = loginInfo
     return loginInfo
 }
 
 export async function getDevices() {
-    const devices = await getMgr().connection?.getDevices()
+    const devices = ewelinkMgr?.devices || await getMgr().connection?.getDevices()
     ewelinkMgr.devices = devices
     return devices
 }
