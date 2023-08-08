@@ -121,7 +121,7 @@ async function getCompletion(messages: Array<ChatCompletionRequestMessage>, func
 
     return response;
   } catch (error: any) {
-    throw Error(error.response.data.error.message)
+    throw Error(`${error.response.statusText} ${error.response.data?.error?.message}`)
   }
 };
 

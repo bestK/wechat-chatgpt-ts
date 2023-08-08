@@ -1,7 +1,7 @@
 import { Tool } from 'openai-function-calling-tools';
 import { z } from 'zod';
 import { config } from '../../config.js';
-import { FunctionResponse, MessageType } from "../../interface.js";
+import { FunctionResponse, MessageType } from '../../interface.js';
 
 export function createAmapTraffic() {
     const paramsSchema = z.object({

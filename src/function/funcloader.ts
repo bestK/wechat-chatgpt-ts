@@ -1,4 +1,5 @@
 import { createAmapTraffic } from "./amap/register.js";
+import { createCaiyunWeather } from "./caiyunweather/register.js";
 import { createDuckduckgoSearch } from "./duckduckgo/regsiter.js";
 import {
     createEwelinkAirConditionerSetPower,
@@ -19,6 +20,7 @@ export function functionLoader() {
     const [ewelinkSetAirConditionerPower, ewelinkSetAirConditionerPowerSchema] = createEwelinkAirConditionerSetPower()
     const [duckduckgoSearch, duckduckgoSearchSchema] = createDuckduckgoSearch()
     const [text2Voice, text2VoiceSchema] = createText2Voice()
+    const [caiyunWeather, caiyunWeatherSchema] = createCaiyunWeather()
 
 
     const functionsSchema = [
@@ -31,6 +33,7 @@ export function functionLoader() {
         ewelinkSetAirConditionerPowerSchema,
         duckduckgoSearchSchema,
         text2VoiceSchema,
+        caiyunWeatherSchema,
     ];
 
     const functions = {
@@ -43,6 +46,7 @@ export function functionLoader() {
         ewelinkSetAirConditionerPower,
         duckduckgoSearch,
         text2Voice,
+        caiyunWeather,
     }
 
     return { functions, functionsSchema }
