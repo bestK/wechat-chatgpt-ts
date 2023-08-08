@@ -17,14 +17,20 @@ export interface IConfig {
   amapApiKey: string;
   mjApiHost: string;
   mjApiKey: string;
+  ewelinkName: string;
+  ewelinkPassword: string;
+  ewelinkRegion: string;
+
 }
 
 export interface User {
   username: string,
   chatMessage: Array<ChatCompletionRequestMessage>,
+  runtimeData: Array<RuntimeData>
 }
 
 export enum MessageType {
+  RuntimeError = -1,
   Unknown = 0,
   Attachment = 1, // Attach(6),
   Audio = 2, // Audio(1), Voice(34)
@@ -44,19 +50,72 @@ export enum MessageType {
   Post = 16, // Moment, Channel, Tweet, etc
 }
 
+
+
 export interface FunctionResponse {
   msgType: MessageType,
   data?: any,
-  msg?: string
+  msg?: string,
+  save?: boolean
 }
 
 
-export class MessageBuilder {
-  static build(message: FunctionResponse) {
-    if (message?.msgType == MessageType.Image) {
-      return FileBox.fromUrl(message.data, { name: `${new Date().getTime()}.png` })
-    } else {
-      return message?.data
-    }
+export class FunctionMessageBuilder {
+  /**
+   * 是否为直接返回的消息类型
+   * @param messageType 消息类型
+   * @returns bool
+   */
+  static isDirectMsgType(messageType: MessageType): boolean {
+    const dmts = [MessageType.RuntimeError, MessageType.Image, MessageType.Audio]
+    return dmts.includes(messageType)
   }
+
+  static build(message: FunctionResponse) {
+    switch (message?.msgType) {
+      case MessageType.Image:
+        return FileBox.fromUrl(message.data, { name: `${new Date().getTime()}.png` })
+      case MessageType.Audio:
+        const { data, voice_ms } = message.data
+        const audioFileBox = FileBox.fromBase64(data, `${new Date().getTime()}.sil`)
+        audioFileBox.metadata = {
+          voiceLength: voice_ms
+        }
+        return audioFileBox
+      default:
+        return message?.data;
+    }
+
+  }
+}
+
+export interface RuntimeData {
+  name: string
+  data: any
+}
+
+export class RuntimeDataCtx {
+  static dataList: Array<RuntimeData> = [];
+
+  static save(data: RuntimeData, overwrite: boolean = false) {
+    if (overwrite) {
+      this.removeByName(data.name)
+    }
+    this.dataList.push(data)
+  }
+
+  static get(name: string): RuntimeData | undefined {
+    return this.dataList.find(item => item.name == name);
+  }
+
+  static removeByName(name: string) {
+    this.dataList = this.dataList.filter(item => item.name !== name);
+  }
+}
+
+
+export enum MidjourneyAction {
+  UPSCALE = "UPSCALE",// 放大
+  VARIATION = "VARIATION", // 变换
+  REROLL = "REROLL", // 重新生成
 }

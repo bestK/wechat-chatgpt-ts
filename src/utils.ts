@@ -1,8 +1,10 @@
+import imgur from 'imgur';
+
 import { ChatCompletionRequestMessage } from "openai";
 
+import { FileBoxInterface } from "file-box";
 import GPT3TokenizerImport from 'gpt3-tokenizer';
 import { config } from "./config.js";
-
 export const regexpEncode = (str: string) => str.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
 
 const GPT3Tokenizer: typeof GPT3TokenizerImport =
@@ -25,9 +27,21 @@ function countTokens(str: string): number {
   return encoded.bpe.length
 }
 export function isTokenOverLimit(chatMessage: ChatCompletionRequestMessage[]): boolean {
-  let limit = 4096;
+  let limit = 16385;
   if (config.model === "gpt-3.5-turbo" || config.model === "gpt-3.5-turbo-0301") {
     limit = 4096;
   }
   return calTokens(chatMessage) > limit;
+}
+
+export async function uploadImageToImgur(image: FileBoxInterface) {
+  const url = "https://api.imgur.com/3/image"
+  // @ts-expect-error
+  const ImgurClient = imgur.ImgurClient
+  const client = new ImgurClient({ clientId: '62d7bf3ef3abda2' });
+  const response = await client.upload({
+    image: await image.toBuffer(),
+    type: 'stream',
+  });
+  return response.data.link
 }

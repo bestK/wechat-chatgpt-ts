@@ -3,9 +3,9 @@ import { Message } from "wechaty";
 import { ContactImpl, ContactInterface, RoomImpl, RoomInterface } from "wechaty/impls";
 import { config } from "./config.js";
 import DBUtils from "./data.js";
-import { MessageType } from "./interface.js";
-import { chatgpt, dalle, functionCall, whisper } from "./openai.js";
-import { regexpEncode } from "./utils.js";
+import { MessageType, RuntimeDataCtx } from "./interface.js";
+import { chatWithFunctions, whisper } from "./openai.js";
+import { regexpEncode, uploadImageToImgur } from "./utils.js";
 
 const SINGLE_MESSAGE_MAX_SIZE = 500;
 type Speaker = RoomImpl | ContactImpl;
@@ -40,16 +40,19 @@ export class ChatGPTBot {
       name: "help",
       description: "显示帮助信息",
       exec: async (talker) => {
-        await this.trySay(talker, "========\n" +
-          "/cmd help\n" +
-          "# 显示帮助信息\n" +
-          "/cmd prompt <PROMPT>\n" +
-          "# 设置当前会话的 prompt \n" +
-          "/img <PROMPT>\n" +
-          "# 根据 prompt 生成图片\n" +
-          "/cmd clear\n" +
-          "# 清除自上次启动以来的所有会话\n" +
-          "========");
+        await this.trySay(talker,
+          `
+        ========
+        /cmd help
+        # 显示帮助信息
+        /cmd prompt <PROMPT>
+        # 设置当前会话的 prompt
+        /img <PROMPT>
+        # 根据 prompt 生成图片
+        /cmd clear
+        # 清除自上次启动以来的所有会话
+        ========
+        `);
       }
     },
     {
@@ -114,9 +117,11 @@ export class ChatGPTBot {
     return text
   }
   async getGPTMessage(talkerName: string, text: string): Promise<string> {
-    let gptMessage = await chatgpt(talkerName, text);
-    if (gptMessage !== "") {
-      DBUtils.addAssistantMessage(talkerName, gptMessage);
+    let gptMessage = await chatWithFunctions(talkerName, text);
+    if (gptMessage && gptMessage !== "") {
+      if (typeof gptMessage.content == "string") {
+        DBUtils.addAssistantMessage(talkerName, gptMessage);
+      }
       return gptMessage;
     }
     return "Sorry, please try again later. 😔";
@@ -183,7 +188,7 @@ export class ChatGPTBot {
     return (
       talker.self() ||
       // TODO: add doc support
-      !(messageType == MessageType.Text || messageType == MessageType.Audio) ||
+      !(messageType == MessageType.Text || messageType == MessageType.Audio || messageType == MessageType.Image) ||
       talker.name() === "微信团队" ||
       // 语音(视频)消息
       text.includes("收到一条视频/语音聊天消息，请在手机上查看") ||
@@ -215,6 +220,7 @@ export class ChatGPTBot {
   async onMessage(message: Message) {
     const talker = message.talker();
     const rawText = message.text();
+    const refererMsg = await this.refererMsg(message)
     const room = message.room();
     const messageType = message.type();
     const privateChat = !room;
@@ -241,6 +247,14 @@ export class ChatGPTBot {
       })
       return;
     }
+
+    if (privateChat && messageType == MessageType.Image) {
+      const imageMsg = await message.toFileBox()
+      const url = await uploadImageToImgur(imageMsg)
+      await message.say(url)
+      return
+    }
+
     if (rawText.startsWith("/cmd ")) {
       console.log(`🤖 Command: ${rawText}`)
       const cmdContent = rawText.slice(5) // 「/cmd 」一共5个字符(注意空格)
@@ -251,29 +265,7 @@ export class ChatGPTBot {
       }
       return;
     }
-    // 使用DallE生成图片
-    if (rawText.startsWith("/img")) {
-      console.log(`🤖 Image: ${rawText}`)
-      const imgContent = rawText.slice(4)
-      if (privateChat) {
-        let url = await dalle(talker.name(), imgContent) as string;
-        const fileBox = FileBox.fromUrl(url)
-        message.say(fileBox)
-      } else {
-        let url = await dalle(await room.topic(), imgContent) as string;
-        const fileBox = FileBox.fromUrl(url)
-        message.say(fileBox)
-      }
-      return;
-    }
-    if (rawText.startsWith("/fn ")) {
-      console.log(`🤖 fn: ${rawText}`)
-      const content = rawText.slice(4)
 
-      const response = await functionCall(content)
-      message.say(response)
-      return;
-    }
     if (this.triggerGPTMessage(rawText, privateChat)) {
       const text = this.cleanMessage(rawText, privateChat);
       if (privateChat) {
@@ -289,4 +281,24 @@ export class ChatGPTBot {
       return;
     }
   }
+
+
+  async refererMsg(message: Message) {
+    // @ts-ignore
+    const referMessagePayload = message.payload?.referMessagePayload
+    return referMessagePayload
+  }
+
+  async getRefMsgFileBox(payload: any): Promise<FileBox | null> {
+    try {
+      // @ts-ignore
+      return await RuntimeDataCtx.get("bot")?.data.puppet.messageFile(payload?.svrid);
+    } catch (error) {
+      return null
+    }
+  }
 }
+
+
+
+

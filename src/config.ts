@@ -17,4 +17,7 @@ export const config: IConfig = {
   amapApiKey: process.env.AMAP_API_KEY || "",
   mjApiHost: process.env.MJ_API_HOST || "",
   mjApiKey: process.env.MJ_API_KEY || "",
+  ewelinkName: process.env.EWELINK_NAME || "",
+  ewelinkPassword: process.env.EWELINK_PASSWORD || "",
+  ewelinkRegion: process.env.EWELINK_REGION || "",
 };

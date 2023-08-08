@@ -1,3 +1,4 @@
+import { AxiosResponse } from "axios";
 import fs from "fs";
 import {
   ChatCompletionRequestMessage,
@@ -9,8 +10,9 @@ import {
 } from "openai";
 import { config } from "./config.js";
 import DBUtils from "./data.js";
-import { createAmapTraffic, createMidjourney } from "./functions.js";
-import { FunctionResponse as FunctionResult, MessageBuilder, MessageType } from "./interface.js";
+import { functionLoader } from "./function/funcloader.js";
+
+import { FunctionMessageBuilder, FunctionResponse } from "./interface.js";
 
 let cacheKeys: string[] = [];
 let lastFetchTime = 0;
@@ -108,61 +110,81 @@ async function keyProvider() {
 
 
 
-async function functionCall(prompt: string): Promise<any> {
-
-  // ✨ STEP 1: new the tools you want to use
-  const [amapTraffic, amapTrafficSchema] = createAmapTraffic()
-  const [midjourney, midjourneySchema] = createMidjourney()
-
-  const functionsSchema = [
-    amapTrafficSchema,
-    midjourneySchema,
-  ];
-
-  // ✨ STEP 2:  add the tools to the functions object
-  const functions = {
-    amapTraffic,
-    midjourney,
-  }
-
-  const messages: [ChatCompletionRequestMessage] = [
-    {
-      role: "user",
-      content: prompt,
-    },
-  ];
-
-
-  const getCompletion = async (messages: [ChatCompletionRequestMessage]) => {
+async function getCompletion(messages: Array<ChatCompletionRequestMessage>, functionsSchema: Array<any>) {
+  try {
     const response = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo-0613",
+      model: config.model,
       messages,
-      // ✨ STEP 3: add the tools to the schema
       functions: functionsSchema,
       temperature: 0,
     });
 
     return response;
-  };
+  } catch (error: any) {
+    throw Error(error.response.data.error.message)
+  }
+};
 
-  console.log("Question: " + prompt);
-  let response: import("axios").AxiosResponse<CreateChatCompletionResponse, any> = await getCompletion(messages);
+/**
+ * chat with gpt functions
+ * @param username 当前用户
+ * @param message 消息
+ * @returns 结果
+ */
+async function chatWithFunctions(username: string, message: string): Promise<any> {
 
-  if (response != null && response.data.choices[0].finish_reason === "function_call") {
-    const fnName = response?.data.choices[0].message?.function_call?.name;
-    const args = response?.data.choices[0].message?.function_call?.arguments;
+  // 先将用户输入的消息添加到数据库中
+  DBUtils.addUserMessage(username, message);
+  const messages = DBUtils.getChatMessage(username);
+
+  // 加载自定义函数
+  const { functions, functionsSchema } = functionLoader()
+  console.log("Question: " + message);
+  let response: AxiosResponse<CreateChatCompletionResponse, any> = await getCompletion(messages, functionsSchema);
+  if (checkFinishReason(response)) {
+    return functionCall(response, functionsSchema, functions, messages, username)
+  }
+
+  return response.data.choices[0].message?.content
+}
+
+/**
+ * 调用函数
+ * @param response openai 响应
+ * @param functionsSchema 自定义函数结构
+ * @param functions 函数
+ * @param messages 历史消息
+ * @param username 当前用户
+ * @returns 调用结果
+ */
+async function functionCall(response: AxiosResponse<CreateChatCompletionResponse, any>,
+  functionsSchema: Array<any>,
+  functions: any,
+  messages: Array<ChatCompletionRequestMessage>,
+  username: string): Promise<any> {
+
+  try {
+    const fnName = response?.data.choices[0].message?.function_call?.name || ""
+    let args = response?.data.choices[0].message?.function_call?.arguments || "{}";
+    // 在这里加上我们需要的其他参数，例如 username
+    const argsObj = { ...JSON.parse(args), username }
+    args = JSON.stringify(argsObj)
 
     console.log("⚙️ Function call: " + fnName);
-    console.log("🔢 Arguments: " + args);
+    console.log(`🔢 Arguments: `, argsObj);
 
-    //  ✨ STEP 4: call the function
-    // @ts-ignore
     const fn = functions[fnName];
-    // @ts-ignore
-    const result: FunctionResult = await fn(JSON.parse(args));
+    const result: FunctionResponse = await fn(argsObj);
 
-    if (result.msgType == MessageType.Image) {
-      return MessageBuilder.build(result)
+    if (result.save) {
+      DBUtils.addRuntimeData(username, {
+        name: "",
+        data: result.data
+      })
+    }
+
+    if (FunctionMessageBuilder.isDirectMsgType(result.msgType)) {
+      return FunctionMessageBuilder.build(result)
     }
 
     messages.push({
@@ -182,12 +204,30 @@ async function functionCall(prompt: string): Promise<any> {
     });
 
 
-    response = await getCompletion(messages)
-    return response?.data.choices[0].message?.content || ""
-  }
+    response = await getCompletion(messages, functionsSchema)
+    if (checkFinishReason(response)) {
+      return await functionCall(response, functionsSchema, functions, messages, username)
+    }
 
-  return null
+    return response.data.choices[0].message?.content || ""
+  } catch (error: any) {
+    return error.message
+  }
 }
 
-export { chatgpt, dalle, whisper, keyProvider, functionCall };
+/**
+ * 检查完成原因
+ * @param response openai 响应
+ * @param finish_reason 默认 function_call
+ * @returns bool
+ */
+function checkFinishReason(
+  response: AxiosResponse<CreateChatCompletionResponse, any>,
+  finish_reason: string = "function_call"
+): boolean {
+  return response && response.data.choices[0].finish_reason === finish_reason;
+}
+
+export { chatgpt, dalle, whisper, keyProvider, chatWithFunctions };
+
 

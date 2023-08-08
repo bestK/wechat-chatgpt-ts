@@ -1,8 +1,9 @@
 import QRCode from "qrcode";
 import { WechatyBuilder } from "wechaty";
-import PuppetPadlocal from "wechaty-puppet-padlocal";
+import PuppetPadlocal from "wechaty-puppet-padlocal-unofficial";
 import { ChatGPTBot } from "./bot.js";
 import { config } from "./config.js";
+import { RuntimeDataCtx } from "./interface.js";
 const chatGPTBot = new ChatGPTBot();
 
 const bot = WechatyBuilder.build({
@@ -44,6 +45,7 @@ async function main() {
     });
   try {
     await bot.start();
+    RuntimeDataCtx.save({ name: "bot", data: bot })
   } catch (e) {
     console.error(
       `⚠️ Bot start failed, can you log in through wechat on the web?: ${e}`

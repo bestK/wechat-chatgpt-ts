@@ -1,12 +1,13 @@
-import {ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum} from "openai";
-import {User} from "./interface";
-import {isTokenOverLimit} from "./utils.js";
+import { ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum } from "openai";
+import { RuntimeData, User } from "./interface";
+import { isTokenOverLimit } from "./utils.js";
 
 /**
  * 使用内存作为数据库
  */
 
 class DB {
+
   private static data: User[] = [];
 
   /**
@@ -27,6 +28,7 @@ class DB {
           content: "You are a helpful assistant."
         }
       ],
+      runtimeData: []
     };
     DB.data.push(newUser);
     return newUser;
@@ -70,9 +72,9 @@ class DB {
   public addUserMessage(username: string, message: string): void {
     const user = this.getUserByUsername(username);
     if (user) {
-      while (isTokenOverLimit(user.chatMessage)){
+      while (isTokenOverLimit(user.chatMessage)) {
         // 删除从第2条开始的消息(因为第一条是prompt)
-        user.chatMessage.splice(1,1);
+        user.chatMessage.splice(1, 1);
       }
       user.chatMessage.push({
         role: ChatCompletionRequestMessageRoleEnum.User,
@@ -89,9 +91,9 @@ class DB {
   public addAssistantMessage(username: string, message: string): void {
     const user = this.getUserByUsername(username);
     if (user) {
-      while (isTokenOverLimit(user.chatMessage)){
+      while (isTokenOverLimit(user.chatMessage)) {
         // 删除从第2条开始的消息(因为第一条是prompt)
-        user.chatMessage.splice(1,1);
+        user.chatMessage.splice(1, 1);
       }
       user.chatMessage.push({
         role: ChatCompletionRequestMessageRoleEnum.Assistant,
@@ -99,6 +101,22 @@ class DB {
       });
     }
   }
+
+  public addRuntimeData(username: string, data: RuntimeData, override: boolean = false): void {
+    const user = this.getUserByUsername(username);
+    if (user) {
+      if (override) {
+        user.runtimeData = user.runtimeData.filter(item => data.name != item.name)
+      }
+      user.runtimeData.push(data)
+    }
+  }
+
+  public getRuntimeData(username: string, fieldName: string): RuntimeData | undefined {
+    const user = this.getUserByUsername(username)
+    return user.runtimeData.find(item => item.name == fieldName)
+  }
+
 
   /**
    * 清空用户的聊天记录, 并将prompt设置为默认值
