@@ -3,8 +3,8 @@ import { Message } from "wechaty";
 import { ContactImpl, ContactInterface, RoomImpl, RoomInterface } from "wechaty/impls";
 import { config } from "./config.js";
 import DBUtils from "./data.js";
-import { MessageType, RuntimeDataCtx } from "./interface.js";
-import { chatWithFunctions, whisper } from "./openai.js";
+import { FunctionMessageBuilder, MessageType, RuntimeDataCtx } from "./interface.js";
+import { assistantEmotion, chatWithFunctions, whisper } from "./openai.js";
 import { regexpEncode, uploadImageToImgur } from "./utils.js";
 
 const SINGLE_MESSAGE_MAX_SIZE = 500;
@@ -144,13 +144,18 @@ export class ChatGPTBot {
       return;
     }
     let message = mesasge;
+    let sendAudio = mesasge.length % 2 === 0
     while (message.length > SINGLE_MESSAGE_MAX_SIZE) {
       messages.push(message.slice(0, SINGLE_MESSAGE_MAX_SIZE));
       message = message.slice(SINGLE_MESSAGE_MAX_SIZE);
     }
     messages.push(message);
     for (const msg of messages) {
-      await talker.say(msg);
+      if (sendAudio) {
+        await talker.say(await FunctionMessageBuilder.text2audio(msg));
+      } else {
+        await talker.say(msg);
+      }
     }
   }
   // Check whether the ChatGPT processing can be triggered
@@ -203,10 +208,22 @@ export class ChatGPTBot {
     );
   }
 
+  async tryRandomEmoji(talker: RoomInterface | ContactInterface, message: string) {
+    try {
+      if (typeof message == "string" && message.length % 2 == 0) {
+        talker.say(await assistantEmotion(message))
+      }
+    } catch (error: any) {
+      console.error(`tryRandomEmoji`, error)
+    }
+  }
+
   async onPrivateMessage(talker: ContactInterface, text: string) {
     const gptMessage = await this.getGPTMessage(talker.name(), text);
     await this.trySay(talker, gptMessage);
+    await this.tryRandomEmoji(talker, gptMessage)
   }
+
 
   async onGroupMessage(
     talker: ContactInterface,
@@ -298,6 +315,7 @@ export class ChatGPTBot {
     }
   }
 }
+
 
 
 

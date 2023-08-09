@@ -1,5 +1,6 @@
 import { FileBox } from "file-box";
 import { ChatCompletionRequestMessage } from "openai";
+import { createText2Voice } from "./function/voice/regsiter.js";
 
 
 export interface IConfig {
@@ -67,7 +68,7 @@ export class FunctionMessageBuilder {
    * @returns bool
    */
   static isDirectMsgType(messageType: MessageType): boolean {
-    const dmts = [MessageType.RuntimeError, MessageType.Image, MessageType.Audio]
+    const dmts = [MessageType.RuntimeError, MessageType.Image, MessageType.Audio, MessageType.Emoticon]
     return dmts.includes(messageType)
   }
 
@@ -82,10 +83,27 @@ export class FunctionMessageBuilder {
           voiceLength: voice_ms
         }
         return audioFileBox
+      case MessageType.Emoticon:
+        const { cdnurl } = message.data
+        const emoticonBox = FileBox.fromUrl(cdnurl,
+          `message-emotion.jpg`
+        )
+        emoticonBox.mimeType = "emoticon";
+        emoticonBox.metadata = {
+          type: "emoticon",
+          payload: message.data
+        };
+        return emoticonBox
       default:
         return message?.data;
     }
 
+  }
+
+  static async text2audio(text: string) {
+    const [fn, _] = createText2Voice()
+    const res = await fn({ text })
+    return this.build(res)
   }
 }
 

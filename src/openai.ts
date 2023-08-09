@@ -10,6 +10,7 @@ import {
 } from "openai";
 import { config } from "./config.js";
 import DBUtils from "./data.js";
+import { createEmotion, defaultEmotions } from "./function/emotion/register.js";
 import { functionLoader } from "./function/funcloader.js";
 
 import { FunctionMessageBuilder, FunctionResponse } from "./interface.js";
@@ -124,6 +125,26 @@ async function getCompletion(messages: Array<ChatCompletionRequestMessage>, func
     throw Error(`${error.response.statusText} ${error.response.data?.error?.message}`)
   }
 };
+
+/**
+ * 分析文字情绪返回表情包
+ * @param text 文字
+ * @returns 表情包
+ */
+export async function assistantEmotion(text: string): Promise<any> {
+  const [fn, _] = createEmotion()
+  const response = await openai.createChatCompletion({
+    model: config.model,
+    messages: [
+      { role: "system", "content": `给定情绪类型 ${Object.keys(defaultEmotions)} 分析用户给出的句子的情绪,无匹配项则随机其中一个 ，不要加任何解释` },
+      { role: "user", content: text }
+    ],
+    temperature: 0,
+  });
+
+
+  return FunctionMessageBuilder.build(await fn({ "text": response.data.choices[0].message?.content || "无语" }));
+}
 
 /**
  * chat with gpt functions
