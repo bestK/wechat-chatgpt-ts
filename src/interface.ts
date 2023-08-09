@@ -21,7 +21,7 @@ export interface IConfig {
   ewelinkName: string;
   ewelinkPassword: string;
   ewelinkRegion: string;
-
+  ewelinkAllowUser: string;
 }
 
 export interface User {

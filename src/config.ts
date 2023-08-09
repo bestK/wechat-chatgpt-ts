@@ -20,4 +20,5 @@ export const config: IConfig = {
   ewelinkName: process.env.EWELINK_NAME || "",
   ewelinkPassword: process.env.EWELINK_PASSWORD || "",
   ewelinkRegion: process.env.EWELINK_REGION || "",
+  ewelinkAllowUser: process.env.EWELINK_ALLOW_USER || "",
 };

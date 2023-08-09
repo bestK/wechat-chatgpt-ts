@@ -5,6 +5,7 @@ import { EwelinkStateMgr } from "./state.js";
 
 
 let ewelinkMgr: EwelinkStateMgr
+export const allowUsers: string[] = config.ewelinkAllowUser.split(",")
 
 export function getMgr() {
     if (ewelinkMgr?.connection) return ewelinkMgr
