@@ -1,4 +1,5 @@
 import { FileBox } from "file-box";
+import * as FS from "fs";
 import { Message } from "wechaty";
 import { ContactImpl, ContactInterface, RoomImpl, RoomInterface } from "wechaty/impls";
 import { config } from "./config.js";
@@ -6,7 +7,6 @@ import DBUtils from "./data.js";
 import { FunctionMessageBuilder, MessageType, RuntimeDataCtx } from "./interface.js";
 import { assistantEmotion, chatWithFunctions, whisper } from "./openai.js";
 import { regexpEncode, uploadImageToImgur } from "./utils.js";
-
 
 
 // import {log} from "wechaty"
@@ -242,7 +242,7 @@ export class ChatGPTBot {
   }
   async onMessage(message: Message) {
     const talker = message.talker();
-    const rawText = message.text();
+    let rawText = message.text();
     const refererMsg = await this.refererMsg(message)
     const room = message.room();
     const messageType = message.type();
@@ -265,10 +265,8 @@ export class ChatGPTBot {
         return;
       });
       // Whisper
-      whisper("", fileName).then((text) => {
-        message.say(text);
-      })
-      return;
+      rawText = await whisper("", fileName)
+      FS.unlinkSync(fileName)
     }
 
     if (privateChat && messageType == MessageType.Image) {
