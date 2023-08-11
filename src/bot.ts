@@ -7,6 +7,11 @@ import { FunctionMessageBuilder, MessageType, RuntimeDataCtx } from "./interface
 import { assistantEmotion, chatWithFunctions, whisper } from "./openai.js";
 import { regexpEncode, uploadImageToImgur } from "./utils.js";
 
+
+
+// import {log} from "wechaty"
+// log.level("verbose")
+
 const SINGLE_MESSAGE_MAX_SIZE = 500;
 type Speaker = RoomImpl | ContactImpl;
 interface ICommand {
@@ -116,11 +121,11 @@ export class ChatGPTBot {
     // remove more text via - - - - - - - - - - - - - - -
     return text
   }
-  async getGPTMessage(talkerName: string, text: string): Promise<string> {
-    let gptMessage = await chatWithFunctions(talkerName, text);
+  async getGPTMessage(userId: string, text: string): Promise<string> {
+    let gptMessage = await chatWithFunctions(userId, text);
     if (gptMessage && gptMessage !== "") {
       if (typeof gptMessage.content == "string") {
-        DBUtils.addAssistantMessage(talkerName, gptMessage);
+        DBUtils.addAssistantMessage(userId, gptMessage);
       }
       return gptMessage;
     }
@@ -219,7 +224,8 @@ export class ChatGPTBot {
   }
 
   async onPrivateMessage(talker: ContactInterface, text: string) {
-    const gptMessage = await this.getGPTMessage(talker.name(), text);
+    const gptMessage = await this.getGPTMessage(talker.id, text);
+    if ("DONE!" === gptMessage) return
     await this.trySay(talker, gptMessage);
     await this.tryRandomEmoji(talker, gptMessage)
   }
@@ -315,8 +321,6 @@ export class ChatGPTBot {
     }
   }
 }
-
-
 
 
 

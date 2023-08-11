@@ -22,6 +22,7 @@ export interface IConfig {
   ewelinkPassword: string;
   ewelinkRegion: string;
   ewelinkAllowUser: string;
+  qqmusicCookie: string
 }
 
 export interface User {
@@ -32,6 +33,7 @@ export interface User {
 
 export enum MessageType {
   RuntimeError = -1,
+  ForwardMessage = 999,
   Unknown = 0,
   Attachment = 1, // Attach(6),
   Audio = 2, // Audio(1), Voice(34)
@@ -68,7 +70,7 @@ export class FunctionMessageBuilder {
    * @returns bool
    */
   static isDirectMsgType(messageType: MessageType): boolean {
-    const dmts = [MessageType.RuntimeError, MessageType.Image, MessageType.Audio, MessageType.Emoticon]
+    const dmts = [MessageType.RuntimeError, MessageType.Image, MessageType.Audio, MessageType.Emoticon, MessageType.ForwardMessage]
     return dmts.includes(messageType)
   }
 
@@ -94,6 +96,8 @@ export class FunctionMessageBuilder {
           payload: message.data
         };
         return emoticonBox
+      case MessageType.ForwardMessage:
+        return message?.data;
       default:
         return message?.data;
     }

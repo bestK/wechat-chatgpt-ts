@@ -13,7 +13,8 @@ import DBUtils from "./data.js";
 import { createEmotion, defaultEmotions } from "./function/emotion/register.js";
 import { functionLoader } from "./function/funcloader.js";
 
-import { FunctionMessageBuilder, FunctionResponse } from "./interface.js";
+import { FunctionMessageBuilder, FunctionResponse, MessageType, RuntimeDataCtx } from "./interface.js";
+
 
 let cacheKeys: string[] = [];
 let lastFetchTime = 0;
@@ -148,22 +149,22 @@ export async function assistantEmotion(text: string): Promise<any> {
 
 /**
  * chat with gpt functions
- * @param username 当前用户
+ * @param userId 当前用户
  * @param message 消息
  * @returns 结果
  */
-async function chatWithFunctions(username: string, message: string): Promise<any> {
+async function chatWithFunctions(userId: string, message: string): Promise<any> {
 
   // 先将用户输入的消息添加到数据库中
-  DBUtils.addUserMessage(username, message);
-  const messages = DBUtils.getChatMessage(username);
+  DBUtils.addUserMessage(userId, message);
+  const messages = DBUtils.getChatMessage(userId);
 
   // 加载自定义函数
   const { functions, functionsSchema } = functionLoader()
   console.log("Question: " + message);
   let response: AxiosResponse<CreateChatCompletionResponse, any> = await getCompletion(messages, functionsSchema);
   if (checkFinishReason(response)) {
-    return functionCall(response, functionsSchema, functions, messages, username)
+    return functionCall(response, functionsSchema, functions, messages, userId)
   }
 
   return response.data.choices[0].message?.content
@@ -205,7 +206,14 @@ async function functionCall(response: AxiosResponse<CreateChatCompletionResponse
     }
 
     if (FunctionMessageBuilder.isDirectMsgType(result.msgType)) {
-      return FunctionMessageBuilder.build(result)
+      const replyMessage = FunctionMessageBuilder.build(result)
+      if (result.msgType === MessageType.ForwardMessage) {
+        const bot = RuntimeDataCtx.get('bot')?.data
+        await bot.puppet._client.api.forwardMessage(new Date().getTime(), username, result.data, 49, username);
+        return "DONE!"
+      } else {
+        return replyMessage
+      }
     }
 
     messages.push({

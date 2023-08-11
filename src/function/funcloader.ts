@@ -9,6 +9,7 @@ import {
     createEwelinkSetTemperature
 } from "./ewelink/register.js";
 import { createMidjourney, createMidjourneyChange } from "./midjourney/register.js";
+import { createQQMusic } from "./qqmusic/register.js";
 import { createText2Voice } from "./voice/regsiter.js";
 
 export function functionLoader() {
@@ -22,6 +23,7 @@ export function functionLoader() {
     const [duckduckgoSearch, duckduckgoSearchSchema] = createDuckduckgoSearch()
     const [text2Voice, text2VoiceSchema] = createText2Voice()
     const [caiyunWeather, caiyunWeatherSchema] = createCaiyunWeather()
+    const [qqmusic, qqmusicSchema] = createQQMusic()
 
 
 
@@ -36,6 +38,7 @@ export function functionLoader() {
         duckduckgoSearchSchema,
         text2VoiceSchema,
         caiyunWeatherSchema,
+        qqmusicSchema,
     ];
 
     const functions = {
@@ -49,6 +52,7 @@ export function functionLoader() {
         duckduckgoSearch,
         text2Voice,
         caiyunWeather,
+        qqmusic,
     }
 
     return { functions, functionsSchema }

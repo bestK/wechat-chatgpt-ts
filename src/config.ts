@@ -21,4 +21,5 @@ export const config: IConfig = {
   ewelinkPassword: process.env.EWELINK_PASSWORD || "",
   ewelinkRegion: process.env.EWELINK_REGION || "",
   ewelinkAllowUser: process.env.EWELINK_ALLOW_USER || "",
+  qqmusicCookie: process.env.QQMUSIC_COOKIE || "",
 };
