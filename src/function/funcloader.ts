@@ -12,11 +12,20 @@ import { createMidjourney, createMidjourneyChange } from "./midjourney/register.
 import { createQQMusic } from "./qqmusic/register.js";
 import { createText2Voice } from "./voice/regsiter.js";
 
-let FUNCTIONS: object = {}
+
+interface FUNCTIONSTYPE {
+    functions: any,
+    functionsSchema: any
+}
+
+let FUNCTIONS: FUNCTIONSTYPE = {
+    functions: null,
+    functionsSchema: null
+}
 
 export function functionLoader() {
 
-    if (Object.keys(FUNCTIONS).length > 0) {
+    if (FUNCTIONS.functions && FUNCTIONS.functionsSchema) {
         return FUNCTIONS
     }
 
