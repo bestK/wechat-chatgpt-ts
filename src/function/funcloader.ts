@@ -12,7 +12,14 @@ import { createMidjourney, createMidjourneyChange } from "./midjourney/register.
 import { createQQMusic } from "./qqmusic/register.js";
 import { createText2Voice } from "./voice/regsiter.js";
 
+let FUNCTIONS: object = {}
+
 export function functionLoader() {
+
+    if (Object.keys(FUNCTIONS).length > 0) {
+        return FUNCTIONS
+    }
+
     const [amapTraffic, amapTrafficSchema] = createAmapTraffic()
     const [midjourney, midjourneySchema] = createMidjourney()
     const [midjourneyChange, midjourneyChangeSchema] = createMidjourneyChange()
@@ -55,5 +62,7 @@ export function functionLoader() {
         qqmusic,
     }
 
-    return { functions, functionsSchema }
+    FUNCTIONS = { functions, functionsSchema }
+
+    return FUNCTIONS
 }
