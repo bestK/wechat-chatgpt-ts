@@ -1,5 +1,4 @@
 import { FileBox } from "file-box";
-import * as FS from "fs";
 import { Message } from "wechaty";
 import { ContactImpl, ContactInterface, RoomImpl, RoomInterface } from "wechaty/impls";
 import { config } from "./config.js";
@@ -257,16 +256,7 @@ export class ChatGPTBot {
       return;
     }
     if (messageType == MessageType.Audio) {
-      // 保存语音文件
-      const fileBox = await message.toFileBox();
-      let fileName = "./public/" + fileBox.name;
-      await fileBox.toFile(fileName, true).catch((e) => {
-        console.log("保存语音失败", e);
-        return;
-      });
-      // Whisper
-      rawText = await whisper("", fileName)
-      FS.unlinkSync(fileName)
+      rawText = await whisper("", message)
     }
 
     if (privateChat && messageType == MessageType.Image) {

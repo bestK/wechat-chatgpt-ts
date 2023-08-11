@@ -1,4 +1,5 @@
 import { AxiosResponse } from "axios";
+import { FileBox } from "file-box";
 import fs from "fs";
 import {
   ChatCompletionRequestMessage,
@@ -8,6 +9,7 @@ import {
   CreateImageRequestSizeEnum,
   OpenAIApi
 } from "openai";
+import { Message } from "wechaty";
 import { config } from "./config.js";
 import DBUtils from "./data.js";
 import { createEmotion, defaultEmotions } from "./function/emotion/register.js";
@@ -82,10 +84,20 @@ async function dalle(username: string, prompt: string) {
  * @param username
  * @param videoPath
  */
-async function whisper(username: string, videoPath: string): Promise<string> {
-  const file: any = fs.createReadStream(videoPath);
+async function whisper(username: string, message: Message): Promise<string> {
+  const audioFileBox = await message.toFileBox();
+  const api = await fetch('https://tosilk.zeabur.app/v1/decoder', {
+    body: JSON.stringify({ base64: await audioFileBox.toBase64() }),
+    method: 'post',
+    headers: { "Content-Type": "application/json" }
+  })
+  const { data } = await api.json()
+  const mp3 = FileBox.fromBase64(data, `${new Date().getTime()}.mp3`)
+  await mp3.toFile(mp3.name)
+  const file: any = fs.createReadStream(mp3.name);
   const response = await openai.createTranscription(file, "whisper-1")
     .then((res) => res.data).catch((err) => console.log(err));
+  fs.unlinkSync(mp3.name)
   if (response) {
     return response.text;
   } else {
