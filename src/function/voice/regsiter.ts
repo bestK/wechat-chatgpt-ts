@@ -1,4 +1,5 @@
 
+import axios from "axios";
 
 import { Tool } from 'openai-function-calling-tools';
 import { z } from 'zod';
@@ -15,20 +16,48 @@ export function createText2Voice() {
         msgType: MessageType.Audio
     }
     const execute = async ({ text }: z.infer<typeof paramsSchema>) => {
-        const body = JSON.stringify({ "text": text, "format": "sil" })
-        const api = await fetch(`https://douyin.zeabur.app/tts`, {
-            method: 'post',
-            body: body,
-            headers: {
-                "content-type": "application/json",
-            }
-        })
+        try {
+            const res = await axios.request({
+                timeout: 3000,
+                method: "post",
+                url: `https://douyin.zeabur.app/tts`,
+                data: { "text": text, "format": "sil" },
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
+            response.data = res.data
+        } catch (error: any) {
+            console.error(error.message)
+            response.msgType = MessageType.RuntimeError
+            response.data = text
+        }
 
-        const res = await api.json()
-        response.data = res
         return response
     };
 
     return new Tool(paramsSchema, name, description, execute).tool;
 }
 
+const fetchRequest = (url: string, params = {}, timeout = 10000) => {
+    let isTimeout = false;
+    return new Promise(function (resolve, reject) {
+        const TO = setTimeout(function () {
+            isTimeout = true;
+            reject(new Error('Fetch timeout'));
+        }, timeout);
+
+        fetch(url, params)
+            .then(res => {
+                clearTimeout(TO)
+                if (!isTimeout) {
+                    resolve(res)
+                }
+            }).catch(e => {
+                if (isTimeout) {
+                    return
+                }
+                reject(e)
+            })
+    })
+}
