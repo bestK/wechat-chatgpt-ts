@@ -16,6 +16,7 @@ import { createEmotion, defaultEmotions } from "./function/emotion/register.js";
 import { functionLoader } from "./function/funcloader.js";
 
 import { FunctionMessageBuilder, FunctionResponse, MessageType, RuntimeDataCtx } from "./interface.js";
+import { random } from "./utils.js";
 
 
 let cacheKeys: string[] = [];
@@ -23,9 +24,9 @@ let lastFetchTime = 0;
 const cacheDuration = 2 * 60 * 60 * 1000; // 两个小时，以毫秒为单位
 
 
-const configuration = new Configuration({
+let configuration = new Configuration({
   // apiKey: config.openai_api_key,
-  apiKey: (await keyProvider())[0],
+  apiKey: random(await keyProvider()),
   basePath: config.api,
 });
 const openai = new OpenAIApi(configuration);
@@ -39,17 +40,17 @@ async function chatgpt(username: string, message: string): Promise<string> {
   // 先将用户输入的消息添加到数据库中
   DBUtils.addUserMessage(username, message);
   const messages = DBUtils.getChatMessage(username);
-  const response = await openai.createChatCompletion({
-    model: "gpt-3.5-turbo",
+  const response = await catchManyRequstError(() => openai.createChatCompletion({
+    model: config.model,
     messages: messages,
     temperature: config.temperature,
-  });
+  }));
   let assistantMessage = "";
   try {
-    if (response.status === 200) {
+    if (response?.status === 200) {
       assistantMessage = response?.data.choices[0].message?.content?.replace(/^\n+|\n+$/g, "") as string;
     } else {
-      console.log(`Something went wrong,Code: ${response.status}, ${response.statusText}`)
+      console.log(`Something went wrong,Code: ${response?.status}, ${response?.statusText}`)
     }
   } catch (e: any) {
     if (e.request) {
@@ -65,13 +66,13 @@ async function chatgpt(username: string, message: string): Promise<string> {
  * @param prompt
  */
 async function dalle(username: string, prompt: string) {
-  const response = await openai.createImage({
+  const response = await catchManyRequstError(() => openai.createImage({
     prompt: prompt,
     n: 1,
     size: CreateImageRequestSizeEnum._256x256,
     response_format: CreateImageRequestResponseFormatEnum.Url,
     user: username
-  }).then((res) => res.data).catch((err) => console.log(err));
+  })).then((res) => res?.data).catch((err) => console.log(err));
   if (response) {
     return response.data[0].url;
   } else {
@@ -95,8 +96,8 @@ async function whisper(username: string, message: Message): Promise<string> {
   const mp3 = FileBox.fromBase64(data, `${new Date().getTime()}.mp3`)
   await mp3.toFile(mp3.name)
   const file: any = fs.createReadStream(mp3.name);
-  const response = await openai.createTranscription(file, "whisper-1")
-    .then((res) => res.data).catch((err) => console.log(err));
+  const response = await catchManyRequstError(() => openai.createTranscription(file, "whisper-1"))
+    .then((res) => res?.data).catch((err) => console.log(err));
   fs.unlinkSync(mp3.name)
   if (response) {
     return response.text;
@@ -106,10 +107,10 @@ async function whisper(username: string, message: Message): Promise<string> {
 }
 
 
-async function keyProvider() {
+async function keyProvider(refresh: boolean = false) {
   const currentTime = new Date().getTime();
   // 如果缓存不为空且在有效期内，直接返回缓存的 API 密钥
-  if (cacheKeys.length > 0 && currentTime - lastFetchTime < cacheDuration) {
+  if (cacheKeys.length > 0 && currentTime - lastFetchTime < cacheDuration && !refresh) {
     return cacheKeys;
   }
 
@@ -126,12 +127,13 @@ async function keyProvider() {
 
 async function getCompletion(messages: Array<ChatCompletionRequestMessage>, functionsSchema: Array<any>) {
   try {
-    const response = await openai.createChatCompletion({
+
+    const response = await catchManyRequstError(() => openai.createChatCompletion({
       model: config.model,
       messages,
       functions: functionsSchema,
       temperature: 0,
-    });
+    }));
 
     return response;
   } catch (error: any) {
@@ -146,17 +148,17 @@ async function getCompletion(messages: Array<ChatCompletionRequestMessage>, func
  */
 export async function assistantEmotion(text: string): Promise<any> {
   const [fn, _] = createEmotion()
-  const response = await openai.createChatCompletion({
+  const response = await catchManyRequstError(() => openai.createChatCompletion({
     model: config.model,
     messages: [
       { role: "system", "content": `给定情绪类型 ${Object.keys(defaultEmotions)} 分析用户给出的句子的情绪,无匹配项则随机其中一个 ，不要加任何解释` },
       { role: "user", content: text }
     ],
     temperature: 0,
-  });
+  }));
 
 
-  return FunctionMessageBuilder.build(await fn({ "text": response.data.choices[0].message?.content || "无语" }));
+  return FunctionMessageBuilder.build(await fn({ "text": response?.data.choices[0].message?.content || "无语" }));
 }
 
 /**
@@ -174,12 +176,12 @@ async function chatWithFunctions(userId: string, message: string): Promise<any> 
   // 加载自定义函数
   const { functions, functionsSchema } = functionLoader()
   console.log("Question: " + message);
-  let response: AxiosResponse<CreateChatCompletionResponse, any> = await getCompletion(messages, functionsSchema);
-  if (checkFinishReason(response)) {
+  let response: AxiosResponse<CreateChatCompletionResponse, any> | undefined = await getCompletion(messages, functionsSchema);
+  if (response && checkFinishReason(response)) {
     return functionCall(response, functionsSchema, functions, messages, userId)
   }
 
-  return response.data.choices[0].message?.content
+  return response?.data.choices[0].message?.content
 }
 
 /**
@@ -191,7 +193,7 @@ async function chatWithFunctions(userId: string, message: string): Promise<any> 
  * @param username 当前用户
  * @returns 调用结果
  */
-async function functionCall(response: AxiosResponse<CreateChatCompletionResponse, any>,
+async function functionCall(response: AxiosResponse<CreateChatCompletionResponse, any> | undefined,
   functionsSchema: Array<any>,
   functions: any,
   messages: Array<ChatCompletionRequestMessage>,
@@ -246,11 +248,11 @@ async function functionCall(response: AxiosResponse<CreateChatCompletionResponse
 
 
     response = await getCompletion(messages, functionsSchema)
-    if (checkFinishReason(response)) {
+    if (response && checkFinishReason(response)) {
       return await functionCall(response, functionsSchema, functions, messages, username)
     }
 
-    return response.data.choices[0].message?.content || ""
+    return response?.data.choices[0].message?.content || ""
   } catch (error: any) {
     return error.message
   }
@@ -267,6 +269,21 @@ function checkFinishReason(
   finish_reason: string = "function_call"
 ): boolean {
   return response && response.data.choices[0].finish_reason === finish_reason;
+}
+
+
+async function catchManyRequstError(request: () => Promise<AxiosResponse<any, any>>) {
+  try {
+    return await request()
+  } catch (error: any) {
+    if (error.response.statusText == 429) {
+      configuration = new Configuration({
+        apiKey: random(await keyProvider()),
+        basePath: config.api,
+      });
+      return await request()
+    }
+  }
 }
 
 export { chatgpt, dalle, whisper, keyProvider, chatWithFunctions };

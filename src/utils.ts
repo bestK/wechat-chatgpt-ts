@@ -45,3 +45,10 @@ export async function uploadImageToImgur(image: FileBoxInterface) {
   });
   return response.data.link
 }
+
+
+export function random(arr: any) {
+  if (!arr || arr.length == 0) return null
+  let index = Math.floor((Math.random() * arr.length))
+  return arr[index]
+}
