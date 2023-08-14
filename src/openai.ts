@@ -276,7 +276,7 @@ async function catchManyRequstError(request: () => Promise<AxiosResponse<any, an
   try {
     return await request()
   } catch (error: any) {
-    if (error.response.statusText == 429) {
+    if (error.response.status == 429) {
       configuration = new Configuration({
         apiKey: random(await keyProvider()),
         basePath: config.api,
