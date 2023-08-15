@@ -18,7 +18,7 @@ export function createText2Voice() {
     const execute = async ({ text }: z.infer<typeof paramsSchema>) => {
         try {
             const res = await axios.request({
-                timeout: 3000,
+                timeout: 10000,
                 method: "post",
                 url: `https://douyin.zeabur.app/tts`,
                 data: { "text": text, "format": "sil" },
