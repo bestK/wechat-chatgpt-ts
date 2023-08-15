@@ -10,6 +10,7 @@ import {
 } from "./ewelink/register.js";
 import { createMidjourney, createMidjourneyChange } from "./midjourney/register.js";
 import { createQQMusic } from "./qqmusic/register.js";
+import { createReverseGPT4 } from "./reverse_gpt4/register.js";
 import { createText2Voice } from "./voice/regsiter.js";
 
 
@@ -40,6 +41,7 @@ export function functionLoader() {
     const [text2Voice, text2VoiceSchema] = createText2Voice()
     const [caiyunWeather, caiyunWeatherSchema] = createCaiyunWeather()
     const [qqmusic, qqmusicSchema] = createQQMusic()
+    const [reverseGPT4, reverseGPT4Schema] = createReverseGPT4()
 
 
 
@@ -55,6 +57,7 @@ export function functionLoader() {
         text2VoiceSchema,
         caiyunWeatherSchema,
         qqmusicSchema,
+        reverseGPT4Schema,
     ];
 
     const functions = {
@@ -69,6 +72,7 @@ export function functionLoader() {
         text2Voice,
         caiyunWeather,
         qqmusic,
+        reverseGPT4,
     }
 
     FUNCTIONS = { functions, functionsSchema }
