@@ -25,7 +25,8 @@ export function getMgr() {
 
 
 export async function getLoginInfo() {
-    const loginInfo = ewelinkMgr?.loginInfo || await getMgr().connection?.login()
+    // @ts-ignore
+    const loginInfo = ewelinkMgr?.loginInfo || await getMgr().connection?.getCredentials()
     ewelinkMgr.loginInfo = loginInfo
     return loginInfo
 }
