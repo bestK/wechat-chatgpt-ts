@@ -16,7 +16,6 @@ import { createEmotion, defaultEmotions } from "./function/emotion/register.js";
 import { functionLoader } from "./function/funcloader.js";
 
 import { FunctionMessageBuilder, FunctionResponse, MessageType, RuntimeDataCtx } from "./interface.js";
-import { random } from "./utils.js";
 
 
 let cacheKeys: string[] = [];
@@ -25,8 +24,8 @@ const cacheDuration = 2 * 60 * 60 * 1000; // 两个小时，以毫秒为单位
 
 
 let configuration = new Configuration({
-  // apiKey: config.openai_api_key,
-  apiKey: random(await keyProvider()),
+  apiKey: config.openai_api_key,
+  // apiKey: random(await keyProvider()),
   basePath: config.api,
 });
 const openai = new OpenAIApi(configuration);
@@ -276,13 +275,16 @@ async function catchManyRequstError(request: () => Promise<AxiosResponse<any, an
   try {
     return await request()
   } catch (error: any) {
-    if (error.message.indexOf('many') > -1 || error.response.status == 429) {
-      configuration = new Configuration({
-        apiKey: random(await keyProvider()),
-        basePath: config.api,
-      });
-      return await request()
-    }
+    // if (error.response.status == 429) {
+    //   const apikey = random(await keyProvider(true))
+    //   configuration = new Configuration({
+    //     apiKey: apikey,
+    //     basePath: config.api,
+    //   });
+    //   return await request()
+    // }
+    // TODO ...
+    throw error
   }
 }
 
